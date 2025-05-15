@@ -3,15 +3,25 @@ class Load extends Phaser.Scene {
         super("loadScene");
     }
 
+// Tilesheet information:
+
+// Tile size                 •  16px × 16px
+// Space between tiles       •  1px × 1px
+// ---
+// Total tiles (horizontal)  •  20 tiles
+// Total tiles (vertical)    •  20 tiles
+// ---
+// Total tiles in sheet      •  400 tiles
+
     preload() {
         this.load.setPath("./assets/");
-
+        // maybe make a josn file to access it better
         // Load characters spritesheet
-        this.load.atlas("platformer_characters", "tilemap-characters-packed.png", "tilemap-characters-packed.json");
+        this.load.atlas("platformer_characters", "mono_packed.png", "mono_packed.json");
 
         // Load tilemap information
-        this.load.image("tilemap_tiles", "tilemap_packed.png");                         // Packed tilemap
-        this.load.tilemapTiledJSON("platformer-level-1", "platformer-level-1.json");   // Tilemap in JSON
+        this.load.image("", "");              // Packed tilemap
+        this.load.tilemapTiledJSON("platformer-level-1", "testFloorPlatformer.json");   // Tilemap in JSON
     }
 
     create() {
@@ -19,8 +29,8 @@ class Load extends Phaser.Scene {
             key: 'walk',
             frames: this.anims.generateFrameNames('platformer_characters', {
                 prefix: "tile_",
-                start: 0,
-                end: 1,
+                start: 241,
+                end: 244,
                 suffix: ".png",
                 zeroPad: 4
             }),
@@ -32,7 +42,7 @@ class Load extends Phaser.Scene {
             key: 'idle',
             defaultTextureKey: "platformer_characters",
             frames: [
-                { frame: "tile_0000.png" }
+                { frame: "tile_0240.png" }
             ],
             repeat: -1
         });
@@ -41,7 +51,7 @@ class Load extends Phaser.Scene {
             key: 'jump',
             defaultTextureKey: "platformer_characters",
             frames: [
-                { frame: "tile_0001.png" }
+                { frame: "tile_0245.png" }
             ],
         });
 
