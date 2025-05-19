@@ -15,12 +15,12 @@ class Load extends Phaser.Scene {
 
     preload() {
         this.load.setPath("./assets/");
-        // maybe make a josn file to access it better
         // Load characters spritesheet
-        this.load.atlas("platformer_characters", "mono_packed.png", "mono_packed.json");
+        this.load.atlas("platformer_characters", "monoChromeCharacter_packed.png", "monoChromeCharacter_packed.json");
 
         // Load tilemap information
-        this.load.image("", "");              // Packed tilemap
+        this.load.image("platformer_tiles", "monoChrome_tiles_packed.png");
+
         this.load.tilemapTiledJSON("platformer-level-1", "testFloorPlatformer.json");   // Tilemap in JSON
     }
 
@@ -53,6 +53,15 @@ class Load extends Phaser.Scene {
             frames: [
                 { frame: "tile_0245.png" }
             ],
+        });
+
+        this.anims.create({
+            key: 'crouch',
+            defaultTextureKey: "platformer_characters",
+            frames: [
+                { frame: "tile_0246.png"}
+            ],
+            // repeat: -1
         });
 
          // ...and pass to the next Scene
