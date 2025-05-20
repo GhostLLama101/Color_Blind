@@ -25,7 +25,8 @@ let config = {
     },
     width: 1440,
     height: 900,
-    scene: [Load, Platformer]
+    scene: [Load, Platformer],
+    fps: { forceSetTimeOut: true, target: 60 }
 }
 
 var cursors;

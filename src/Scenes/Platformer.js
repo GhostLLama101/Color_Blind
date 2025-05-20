@@ -11,6 +11,8 @@ class Platformer extends Phaser.Scene {
         this.JUMP_VELOCITY = -800;
         this.MAX_SPEED = 350; // set it so if it get the speed it stop accelerating
         this.SCALE = 2.0;
+
+        this.crouching = false;
     }
 
     create() {
@@ -54,6 +56,7 @@ class Platformer extends Phaser.Scene {
             this.physics.world.debugGraphic.clear()
         }, this);
 
+        this.originalHeight = my.sprite.player.height;
 
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
         this.cameras.main.startFollow(my.sprite.player, true, 0.25, 0.25); // (target, [,roundPixels][,lerpX][,lerpY])
@@ -63,18 +66,39 @@ class Platformer extends Phaser.Scene {
     }
 
     update() {
+        if(cursors.down.isDown && my.sprite.player.body.blocked.down){
+            my.sprite.player.anims.play('crouch', true);
+           
+            if(!this.crouching){
+                this.crouching = true
 
-        // if (Math.abs(my.sprite.player.body.velocity.x) > this.MAX_SPEED) {
-        //     // Keep the sign (direction) but limit the magnitude to MAX_SPEED
-        //     my.sprite.player.body.velocity.x = this.MAX_SPEED * Math.sign(my.sprite.player.body.velocity.x);
-        // }
+                let crouchHeight = my.sprite.player.height/2;
+                let offsetY = my.sprite.player.height - crouchHeight; 
+
+                my.sprite.player.body.setSize(my.sprite.player.width, crouchHeight, false);
+                my.sprite.player.body.setOffset(0, offsetY);
+
+            }
+            
+        } else if(this.crouching && (!cursors.down.isDown || !my.sprite.player.body.blocked.down)) {
+            // Reset from crouching state when either:
+            // 1. Down key is released, or
+            // 2. Player is no longer on the ground
+            this.crouching = false;
+            
+            // Reset hitbox to original size with no offset
+            my.sprite.player.body.setSize(my.sprite.player.width, my.sprite.player.height, false);
+            my.sprite.player.body.setOffset(0, 0);
+        }
+        
         if(cursors.left.isDown) {
 
             my.sprite.player.body.setAccelerationX(-this.ACCELERATION);
             my.sprite.player.setFlip(true, false);
             my.sprite.player.anims.play('walk', true);
-            if(cursors.down.isDown){
-                my.sprite.player.body.setSize(my.sprite.player.width, my.sprite.player.height * 0.7, true);
+
+            if(this.crouching){
+                my.sprite.player.body.setSize(my.sprite.player.width, my.sprite.player.height * 0.5, false);
                 my.sprite.player.anims.play('crouch',true);
             } 
             if (my.sprite.player.body.velocity.x < -this.MAX_SPEED) {
@@ -86,23 +110,26 @@ class Platformer extends Phaser.Scene {
             my.sprite.player.body.setAccelerationX(this.ACCELERATION);
             my.sprite.player.resetFlip();
             my.sprite.player.anims.play('walk', true);
-            if(cursors.down.isDown){
-                my.sprite.player.body.setSize(my.sprite.player.width, my.sprite.player.height * 0.7, true); // need to change this to make the bouns shrink from the top
-                my.sprite.player.anims.play('crouch',true);
-            } 
 
+            if(this.crouching){
+                my.sprite.player.body.setSize(my.sprite.player.width, my.sprite.player.height * 0.5, false); // need to change this to make the bouns shrink from the top
+                my.sprite.player.anims.play('crouch',true);
+            }
             if (my.sprite.player.body.velocity.x > this.MAX_SPEED) {
                 my.sprite.player.body.velocity.x = this.MAX_SPEED;
             }
 
-        } 
-        else if(cursors.down.isDown){
-            my.sprite.player.anims.play('crouch',true);
-        
+        } else if(this.crouching && cursors.down.isDown) {
+            my.sprite.player.body.setAccelerationX(0);
+            my.sprite.player.body.setDragX(this.DRAG);
+            my.sprite.player.anims.play('crouch');
+
         } else {
+            // this.crouching = false;
             my.sprite.player.body.setAccelerationX(0);
             my.sprite.player.body.setDragX(this.DRAG);
             my.sprite.player.anims.play('idle');
+            // add the crouch and lie down on your soamac after a couble seconds.
         }
 
         // player jump
