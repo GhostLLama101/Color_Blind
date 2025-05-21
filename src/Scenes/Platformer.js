@@ -4,32 +4,24 @@ class Platformer extends Phaser.Scene {
     }
 
     init() {
-        // variables and settings
         this.ACCELERATION = 400;
-        this.DRAG = 1000;    // DRAG < ACCELERATION = icy slide
+        this.DRAG = 1000;    
         this.physics.world.gravity.y = 2000;
         this.JUMP_VELOCITY = -800;
-        this.MAX_SPEED = 350; // set it so if it get the speed it stop accelerating
+        this.MAX_SPEED = 350; 
         this.SCALE = 2.0;
 
         this.crouching = false;
     }
 
     create() {
-        // Create a new tilemap game object which uses 18x18 pixel tiles, and is
-        // 45 tiles wide and 25 tiles tall.
         this.map = this.add.tilemap("platformer-level-1", 16, 16, 60, 50);
 
-        // Add a tileset to the map
-        // First parameter: name we gave the tileset in Tiled
-        // Second parameter: key for the tilesheet (from this.load.image in Load.js)
         this.tileset = this.map.addTilesetImage("monoChrome_tiles_packed", "platformer_tiles");
 
-        // Create a layer
         this.groundLayer = this.map.createLayer("floor", this.tileset, 0, 0);
         // this.groundLayer.setScale(1.5);
 
-        // Make it collidable
         this.groundLayer.setCollisionByProperty({
             collides: true
         });
@@ -66,28 +58,41 @@ class Platformer extends Phaser.Scene {
     }
 
     update() {
+        let canStandUp = true;
+        if(this.crouching) {
+            // Create a temporary physics body above the player to check for collisions
+            const tileAbove = this.groundLayer.getTileAtWorldXY(
+                my.sprite.player.x, 
+                my.sprite.player.y - this.originalHeight/2, 
+                true
+            );
+            
+            // If there's a colliding tile above, the player can't stand up
+            if(tileAbove && tileAbove.properties.collides) {
+                canStandUp = false;
+            }
+        }
+
+        // Existing crouching logic, but modified to check if player can stand up
         if(cursors.down.isDown && my.sprite.player.body.blocked.down){
             my.sprite.player.anims.play('crouch', true);
-           
+        
             if(!this.crouching){
-                this.crouching = true
+                this.crouching = true;
 
                 let crouchHeight = my.sprite.player.height/2;
                 let offsetY = my.sprite.player.height - crouchHeight; 
 
                 my.sprite.player.body.setSize(my.sprite.player.width, crouchHeight, false);
                 my.sprite.player.body.setOffset(0, offsetY);
-
             }
             
-        } else if(this.crouching && (!cursors.down.isDown || !my.sprite.player.body.blocked.down)) {
-            // Reset from crouching state when either:
-            // 1. Down key is released, or
-            // 2. Player is no longer on the ground
+        } else if(this.crouching && (!cursors.down.isDown || !my.sprite.player.body.blocked.down) && canStandUp) {
+            // Only reset from crouching if the player CAN stand up (no ceiling above)
             this.crouching = false;
             
             // Reset hitbox to original size with no offset
-            my.sprite.player.body.setSize(my.sprite.player.width, my.sprite.player.height, false);
+            my.sprite.player.body.setSize(my.sprite.player.width, this.originalHeight, false);
             my.sprite.player.body.setOffset(0, 0);
         }
         
@@ -128,17 +133,22 @@ class Platformer extends Phaser.Scene {
             // this.crouching = false;
             my.sprite.player.body.setAccelerationX(0);
             my.sprite.player.body.setDragX(this.DRAG);
-            my.sprite.player.anims.play('idle');
+            if(canStandUp){
+                my.sprite.player.anims.play('idle');
+            }
             // add the crouch and lie down on your soamac after a couble seconds.
         }
-
-        // player jump
-        // note that we need body.blocked rather than body.touching b/c the former applies to tilemap tiles and the latter to the "ground"
+            // player.anims.getCurrentKey() === 'crouch'
+        if(!canStandUp){ //crouched cant jump
+            cursors.up.enabled = false;
+        }
+        else {
+            cursors.up.enabled = true;
+        }
         if(!my.sprite.player.body.blocked.down) {
             my.sprite.player.anims.play('jump');
         }
         if(my.sprite.player.body.blocked.down && Phaser.Input.Keyboard.JustDown(cursors.up)) {
-            // TODO: set a Y velocity to have the player "jump" upwards (negative Y direction)
             my.sprite.player.body.setVelocityY(this.JUMP_VELOCITY);
         }
     }

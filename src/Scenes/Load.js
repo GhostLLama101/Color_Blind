@@ -61,14 +61,8 @@ class Load extends Phaser.Scene {
             frames: [
                 { frame: "tile_0246.png"}
             ],
-            // repeat: -1
         });
 
-         // ...and pass to the next Scene
-         this.scene.start("platformerScene");
-    }
-
-    // Never get here since a new scene is started in create()
-    update() {
+        this.scene.start("platformerScene");
     }
 }
