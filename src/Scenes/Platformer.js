@@ -10,6 +10,7 @@ class Platformer extends Phaser.Scene {
         this.JUMP_VELOCITY = -800;
         this.MAX_SPEED = 350; 
         this.SCALE = 2.0;
+        this.CRAWL_SPEED = 75;
 
         this.crouching = false;
     }
@@ -42,7 +43,6 @@ class Platformer extends Phaser.Scene {
         // set up Phaser-provided cursor key input
         cursors = this.input.keyboard.createCursorKeys();
 
-        // debug key listener (assigned to D key)
         this.input.keyboard.on('keydown-D', () => {
             this.physics.world.drawDebug = this.physics.world.drawDebug ? false : true
             this.physics.world.debugGraphic.clear()
@@ -51,15 +51,17 @@ class Platformer extends Phaser.Scene {
         this.originalHeight = my.sprite.player.height;
 
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
-        this.cameras.main.startFollow(my.sprite.player, true, 0.25, 0.25); // (target, [,roundPixels][,lerpX][,lerpY])
+        this.cameras.main.startFollow(my.sprite.player, true, 0.25, 0.25);
         this.cameras.main.setDeadzone(50, 50);
         this.cameras.main.setZoom(this.SCALE+1);
 
     }
 
     update() {
+        //Claud
         let canStandUp = true;
         if(this.crouching) {
+            //Claud
             // Create a temporary physics body above the player to check for collisions
             const tileAbove = this.groundLayer.getTileAtWorldXY(
                 my.sprite.player.x, 
@@ -71,8 +73,14 @@ class Platformer extends Phaser.Scene {
             if(tileAbove && tileAbove.properties.collides) {
                 canStandUp = false;
             }
-        }
 
+            //reduce the speed for crouching/crawling
+            // my.sprite.player.body.setVelocityX(this.CRAWL_SPEED);
+            this.MAX_SPEED = this.CRAWL_SPEED;
+        } else {
+            this.MAX_SPEED = 350;
+        }
+        //Claud
         // Existing crouching logic, but modified to check if player can stand up
         if(cursors.down.isDown && my.sprite.player.body.blocked.down){
             my.sprite.player.anims.play('crouch', true);
@@ -97,7 +105,7 @@ class Platformer extends Phaser.Scene {
         }
         
         if(cursors.left.isDown) {
-
+            // const accel = this.crouching ? this.ACCELERATION * 0.5 : this.ACCELERATION;
             my.sprite.player.body.setAccelerationX(-this.ACCELERATION);
             my.sprite.player.setFlip(true, false);
             my.sprite.player.anims.play('walk', true);
