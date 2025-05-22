@@ -22,6 +22,12 @@ class Load extends Phaser.Scene {
         this.load.image("platformer_tiles", "monoChrome_tiles_packed.png");
 
         this.load.tilemapTiledJSON("platformer-level-1", "testFloorPlatformer.json");   // Tilemap in JSON
+
+        // might need to load a sprite sheet to make colisions?
+        this.load.spritesheet("GEMS_Tiles", "monoChrome_tiles_packed.png", {
+            frameWidth: 16,
+            frameHeight: 16
+        });
     }
 
     create() {

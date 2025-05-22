@@ -22,10 +22,18 @@ class Platformer extends Phaser.Scene {
 
         this.groundLayer = this.map.createLayer("floor", this.tileset, 0, 0);
         // this.groundLayer.setScale(1.5);
+        
+        this.gems = this.map.createFromObjects("Objects", {
+            name: "GEM",
+            key: "GEMS_Tiles",
+            frame: 20
+        });
 
         this.groundLayer.setCollisionByProperty({
             collides: true
         });
+
+        
 
         // set up player avatar
         my.sprite.player = this.physics.add.sprite(
@@ -39,6 +47,18 @@ class Platformer extends Phaser.Scene {
 
         // Enable collision handling
         this.physics.add.collider(my.sprite.player, this.groundLayer);
+
+        // Since createFromObjects returns an array of regular Sprites, we need to convert 
+        // them into Arcade Physics sprites (STATIC_BODY, so they don't move) 
+        this.physics.world.enable(this.gems, Phaser.Physics.Arcade.STATIC_BODY);
+
+        // Create a Phaser group out of the array this.coins
+        // This will be used for collision detection below.
+        this.gemGroup = this.add.group(this.gems);
+
+        this.physics.add.overlap(my.sprite.player, this.gemGroup, (obj1, obj2) => {
+            obj2.destroy(); 
+        });
 
         // set up Phaser-provided cursor key input
         cursors = this.input.keyboard.createCursorKeys();
