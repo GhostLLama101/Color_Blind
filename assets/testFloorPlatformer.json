@@ -203,14 +203,14 @@
                 }, 
                 {
                  "gid":60,
-                 "height":32,
+                 "height":32.1452991452992,
                  "id":9,
                  "name":"OPEN_DOOR",
                  "rotation":0,
                  "type":"",
-                 "visible":true,
-                 "width":32,
-                 "x":881.25,
+                 "visible":false,
+                 "width":31.6763914213771,
+                 "x":880,
                  "y":752
                 }, 
                 {

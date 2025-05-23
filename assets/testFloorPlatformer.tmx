@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="60" height="50" tilewidth="16" tileheight="16" infinite="0" nextlayerid="4" nextobjectid="13">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="60" height="50" tilewidth="16" tileheight="16" infinite="0" nextlayerid="4" nextobjectid="14">
  <editorsettings>
   <export target="testFloorPlatformer.json" format="json"/>
  </editorsettings>
@@ -166,7 +166,12 @@
   <object id="4" name="GEM" gid="21" x="176" y="736" width="16" height="16"/>
   <object id="5" name="GEM" gid="21" x="192" y="752" width="16" height="16"/>
   <object id="8" name="DOOR" gid="57" x="880" y="752" width="32" height="32"/>
-  <object id="9" name="OPEN_DOOR" gid="60" x="881.25" y="752" width="32" height="32"/>
-  <object id="12" name="Player_Spawn" gid="1" x="64" y="720" width="16" height="16"/>
+  <object id="9" name="OPEN_DOOR" gid="60" x="880" y="752" width="31.6764" height="32.1453" visible="0"/>
+  <object id="13" name="spawn" x="92" y="686.667">
+   <properties>
+    <property name="spawn_point" type="bool" value="true"/>
+   </properties>
+   <point/>
+  </object>
  </objectgroup>
 </map>

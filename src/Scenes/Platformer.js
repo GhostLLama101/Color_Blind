@@ -58,7 +58,7 @@ class Platformer extends Phaser.Scene {
         });
 
         this.opendoor = this.map.createFromObjects("Objects", {
-            name: "DOOR_OPEN",
+            name: "OPEN_DOOR",
             key: "OPEN_DOOR",
             frame: 59,
             visible: false
@@ -92,7 +92,6 @@ class Platformer extends Phaser.Scene {
                     // Show and position open doors
                     this.opendoor.forEach(opendoor => {
                         opendoor.setVisible(true);
-                        opendoor.setDepth(15);
                     });
                     
                     // Destroy closed doors
@@ -110,6 +109,16 @@ class Platformer extends Phaser.Scene {
             if(!this.gemsCollected) {
                 //TODO: display need to collect power gems. 
                 
+            }
+        });
+
+        this.physics.add.overlap(my.sprite.player, this.opendoor, (obj1,obj2) => {
+            if(this.gemsCollected) { 
+                setTimeout(() => {
+                    console.log('collided with open door');
+                    // pan camera to second spawn point
+                    // spawn player at second spawn point.
+                }, 2000);
             }
         });
 
