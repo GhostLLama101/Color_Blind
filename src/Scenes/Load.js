@@ -28,6 +28,16 @@ class Load extends Phaser.Scene {
             frameWidth: 16,
             frameHeight: 16
         });
+        
+        this.load.spritesheet("DOOR_CLOSED", "monoChrome_tiles_packed.png", {
+            frameWidth: 16,
+            frameHeight: 16
+        });
+
+        this.load.spritesheet("DOOR_OPEN", "monoChrome_tiles_packed.png", {
+            frameWidth: 16,
+            frameHeight: 16
+        });
     }
 
     create() {

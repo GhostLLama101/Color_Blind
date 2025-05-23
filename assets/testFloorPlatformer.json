@@ -191,27 +191,45 @@
                 }, 
                 {
                  "gid":57,
-                 "height":16,
+                 "height":32,
                  "id":8,
                  "name":"DOOR",
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":16,
-                 "x":896,
+                 "width":32,
+                 "x":880,
                  "y":752
                 }, 
                 {
                  "gid":60,
-                 "height":16,
+                 "height":32,
                  "id":9,
                  "name":"OPEN_DOOR",
                  "rotation":0,
                  "type":"",
-                 "visible":false,
-                 "width":16,
-                 "x":896,
+                 "visible":true,
+                 "width":32,
+                 "x":881.25,
                  "y":752
+                }, 
+                {
+                 "height":0,
+                 "id":13,
+                 "name":"spawn",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"spawn_point",
+                         "type":"bool",
+                         "value":true
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":92,
+                 "y":686.666666666667
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -220,7 +238,7 @@
          "y":0
         }],
  "nextlayerid":4,
- "nextobjectid":10,
+ "nextobjectid":14,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",

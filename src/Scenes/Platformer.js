@@ -11,7 +11,7 @@ class Platformer extends Phaser.Scene {
         this.MAX_SPEED = 350; 
         this.SCALE = 2.0;
         this.CRAWL_SPEED = 75;
-
+        this.gemsCollected = false;
         this.crouching = false;
     }
 
@@ -21,43 +21,96 @@ class Platformer extends Phaser.Scene {
         this.tileset = this.map.addTilesetImage("monoChrome_tiles_packed", "platformer_tiles");
 
         this.groundLayer = this.map.createLayer("floor", this.tileset, 0, 0);
-        // this.groundLayer.setScale(1.5);
+
+        const spawnPoint = this.map.findObject("Objects", obj => obj.name === "spawn");
+        let playerSpawnX = 100; 
+        let playerSpawnY = 600; 
         
-        this.gems = this.map.createFromObjects("Objects", {
-            name: "GEM",
-            key: "GEMS_Tiles",
-            frame: 20
-        });
+        if (spawnPoint) {
+            playerSpawnX = spawnPoint.x;
+            playerSpawnY = spawnPoint.y;
+        }
 
         this.groundLayer.setCollisionByProperty({
             collides: true
         });
 
-        
-
-        // set up player avatar
         my.sprite.player = this.physics.add.sprite(
-            game.config.width/4,
-            game.config.height/2,
+            playerSpawnX,
+            playerSpawnY,
             "platformer_characters",
             "tile_0240.png"
-        ).setScale(SCALE)
+        ).setScale(this.SCALE);
+
+        my.sprite.player.setDepth(10);
+
+        this.gems = this.map.createFromObjects("Objects", {
+            name: "GEM",
+            key: "GEMS_Tiles",
+            frame: 20
+        });
+        
+        this.door = this.map.createFromObjects("Objects", {
+            name: "DOOR",
+            key: "DOOR_CLOSED",
+            frame: 56,
+            visible: true
+        });
+
+        this.opendoor = this.map.createFromObjects("Objects", {
+            name: "DOOR_OPEN",
+            key: "OPEN_DOOR",
+            frame: 59,
+            visible: false
+        });
+
+        
+        // this.opendoor.setDepth(9);
 
         my.sprite.player.setCollideWorldBounds(true);
 
         // Enable collision handling
         this.physics.add.collider(my.sprite.player, this.groundLayer);
-
-        // Since createFromObjects returns an array of regular Sprites, we need to convert 
-        // them into Arcade Physics sprites (STATIC_BODY, so they don't move) 
         this.physics.world.enable(this.gems, Phaser.Physics.Arcade.STATIC_BODY);
+        this.physics.world.enable(this.door, Phaser.Physics.Arcade.STATIC_BODY);
+        this.physics.world.enable(this.opendoor, Phaser.Physics.Arcade.STATIC_BODY); //need colision to excit the game.
 
-        // Create a Phaser group out of the array this.coins
-        // This will be used for collision detection below.
         this.gemGroup = this.add.group(this.gems);
+        this.doorGroup = this.add.group(this.door);
+        this.openDoorGroup = this.add.group(this.opendoor); 
 
         this.physics.add.overlap(my.sprite.player, this.gemGroup, (obj1, obj2) => {
             obj2.destroy(); 
+
+            if(this.gemGroup.children.size === 0) {
+                this.gemsCollected = true;
+                
+                // Handle door swap immediately when all gems collected
+                if (!this.doorsSwapped) {
+                    this.doorsSwapped = true;
+                    
+                    // Show and position open doors
+                    this.opendoor.forEach(opendoor => {
+                        opendoor.setVisible(true);
+                        opendoor.setDepth(15);
+                    });
+                    
+                    // Destroy closed doors
+                    this.door.forEach(door => {
+                        door.destroy();
+                    });
+                    
+                    // Clear the door array
+                    this.door = [];
+                }
+            }
+        });
+
+        this.physics.add.overlap(my.sprite.player, this.door, (obj1, obj2) => {
+            if(!this.gemsCollected) {
+                //TODO: display need to collect power gems. 
+                
+            }
         });
 
         // set up Phaser-provided cursor key input
@@ -94,8 +147,6 @@ class Platformer extends Phaser.Scene {
                 canStandUp = false;
             }
 
-            //reduce the speed for crouching/crawling
-            // my.sprite.player.body.setVelocityX(this.CRAWL_SPEED);
             this.MAX_SPEED = this.CRAWL_SPEED;
         } else {
             this.MAX_SPEED = 350;
