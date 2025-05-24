@@ -171,7 +171,7 @@ class Platformer extends Phaser.Scene {
 
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
         this.cameras.main.startFollow(my.sprite.player, true, 0.25, 0.25);
-        this.cameras.main.setDeadzone(50, 50);
+        this.cameras.main.setDeadzone(150, 150);
         this.cameras.main.setZoom(this.SCALE+1);
         
         this.animatedTiles.init(this.map);
