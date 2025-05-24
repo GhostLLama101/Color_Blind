@@ -79,6 +79,21 @@ class Platformer extends Phaser.Scene {
         this.doorGroup = this.add.group(this.door);
         this.openDoorGroup = this.add.group(this.opendoor); 
 
+
+
+        let propertyCollider = (obj1, obj2) => {
+            // Handle intersection with dangerous tiles
+            if (obj2.properties.damage) {
+                my.sprite.player.x = spawnPoint.x;
+                my.sprite.player.y = spawnPoint.y;
+                console.log("Player hit spikes! Respawning...");
+                my.sprite.player.body.setVelocity(0, 0);
+            }
+            // Could add handlers for other types of tiles here
+        }
+
+        this.physics.add.overlap(my.sprite.player, this.groundLayer, propertyCollider);
+
         this.physics.add.overlap(my.sprite.player, this.gemGroup, (obj1, obj2) => {
             obj2.destroy(); 
 
@@ -114,11 +129,14 @@ class Platformer extends Phaser.Scene {
 
         this.physics.add.overlap(my.sprite.player, this.opendoor, (obj1,obj2) => {
             if(this.gemsCollected) { 
+                // add a flag to only do the camer pan once.
                 setTimeout(() => {
                     console.log('collided with open door');
                     // pan camera to second spawn point
                     // spawn player at second spawn point.
                 }, 2000);
+
+                // OPTIONAL: add a fade in and out effect to transition levels?
             }
         });
 
