@@ -15,6 +15,8 @@ class Platformer extends Phaser.Scene {
         this.crouching = false;
     }
 
+    
+
     create() {
         this.map = this.add.tilemap("platformer-level-1", 16, 16, 60, 50);
 
@@ -161,15 +163,11 @@ class Platformer extends Phaser.Scene {
         //Claud
         let canStandUp = true;
         if(this.crouching) {
-            //Claud
-            // Create a temporary physics body above the player to check for collisions
             const tileAbove = this.groundLayer.getTileAtWorldXY(
                 my.sprite.player.x, 
                 my.sprite.player.y - this.originalHeight/2, 
                 true
             );
-            
-            // If there's a colliding tile above, the player can't stand up
             if(tileAbove && tileAbove.properties.collides) {
                 canStandUp = false;
             }
@@ -179,7 +177,6 @@ class Platformer extends Phaser.Scene {
             this.MAX_SPEED = 350;
         }
         //Claud
-        // Existing crouching logic, but modified to check if player can stand up
         if(cursors.down.isDown && my.sprite.player.body.blocked.down){
             my.sprite.player.anims.play('crouch', true);
         
@@ -204,6 +201,9 @@ class Platformer extends Phaser.Scene {
         
         if(cursors.left.isDown) {
             // const accel = this.crouching ? this.ACCELERATION * 0.5 : this.ACCELERATION;
+            if(my.sprite.player.body.velocity.x > 0) {
+                my.sprite.player.body.setVelocityX(my.sprite.player.body.velocity.x * 0.5);
+            }
             my.sprite.player.body.setAccelerationX(-this.ACCELERATION);
             my.sprite.player.setFlip(true, false);
             my.sprite.player.anims.play('walk', true);
@@ -217,7 +217,9 @@ class Platformer extends Phaser.Scene {
             }
 
         } else if(cursors.right.isDown) {
-
+            if(my.sprite.player.body.velocity.x < 0) {
+                my.sprite.player.body.setVelocityX(my.sprite.player.body.velocity.x * 0.5);
+            }
             my.sprite.player.body.setAccelerationX(this.ACCELERATION);
             my.sprite.player.resetFlip();
             my.sprite.player.anims.play('walk', true);
