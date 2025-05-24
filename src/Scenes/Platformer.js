@@ -13,6 +13,10 @@ class Platformer extends Phaser.Scene {
         this.CRAWL_SPEED = 75;
         this.gemsCollected = false;
         this.crouching = false;
+        this.cameraPan = false;
+
+        this.currentSection = 1;
+        this.sectionTransitioned = false;
     }
 
     preload() {
@@ -26,7 +30,7 @@ class Platformer extends Phaser.Scene {
 
         this.groundLayer = this.map.createLayer("floor", this.tileset, 0, 0);
 
-        const spawnPoint = this.map.findObject("Objects", obj => obj.name === "spawn");
+        let spawnPoint = this.map.findObject("Objects", obj => obj.name === "spawn");
         let playerSpawnX = 100; 
         let playerSpawnY = 600; 
         
@@ -147,12 +151,21 @@ class Platformer extends Phaser.Scene {
         });
 
         this.physics.add.overlap(my.sprite.player, this.opendoor, (obj1,obj2) => {
-            if(this.gemsCollected) { 
-                // add a flag to only do the camer pan once.
+            if(this.gemsCollected && !this.sectionTransitioned) { 
+                this.sectionTransitioned = true;
+
+                spawnPoint = this.map.findObject("Objects", obj => obj.name === "2spawn");
+
                 setTimeout(() => {
-                    console.log('collided with open door');
-                    // pan camera to second spawn point
-                    // spawn player at second spawn point.
+                    if(!this.cameraPan){
+                        this.cameraPan = true;
+                        console.log('going to  section 2');
+                        my.sprite.player.x = spawnPoint.x;
+                        my.sprite.player.y = spawnPoint.y;
+                        
+                        this.transitionToSection(2);
+                        
+                    }
                 }, 2000);
 
                 // OPTIONAL: add a fade in and out effect to transition levels?
@@ -167,15 +180,84 @@ class Platformer extends Phaser.Scene {
             this.physics.world.debugGraphic.clear()
         }, this);
 
-        this.originalHeight = my.sprite.player.height;
+        this.originalHeight = my.sprite.player.height; 
 
-        this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
-        this.cameras.main.startFollow(my.sprite.player, true, 0.25, 0.25);
-        this.cameras.main.setDeadzone(150, 150);
-        this.cameras.main.setZoom(this.SCALE+1);
+        //Define your level sections - adjust these values to match your level layout
+        this.sections = {
+            1: {
+                bounds: { x: 0, y: 0, width: 960, height: 800 }, // First section bounds
+                cameraStart: { x: 0, y: 300 } // Where camera focuses in this section
+            },
+            2: {
+                bounds: { x: 0, y: 0, width: 960, height: 400 }, // Second section bounds  
+                cameraStart: { x: 0, y: 300 } // Where camera focuses in this section
+            }
+            // Add more sections as needed
+        };
+
+        // Set initial camera bounds for section 1
+        let initialSection = this.sections[this.currentSection];
+        this.cameras.main.setBounds(
+            initialSection.bounds.x, 
+            initialSection.bounds.y, 
+            initialSection.bounds.width, 
+            initialSection.bounds.height
+        );
+
+        // Start camera at ground level of current section
+        let groundCameraY = 600;
+        this.cameras.main.setScroll(
+            playerSpawnX - 400, 
+            groundCameraY - 300
+        );
+
+        // Set up following with custom deadzone
+        this.cameras.main.startFollow(my.sprite.player, true, 0.08, 0.05);
+        this.cameras.main.setDeadzone(100, 100);
+        this.cameras.main.setZoom(this.SCALE + 1);
         
         this.animatedTiles.init(this.map);
+    }
 
+    transitionToSection(sectionNumber) {
+        this.currentSection = sectionNumber;
+        let newSection = this.sections[sectionNumber];
+        
+        // Update camera bounds to new section
+        this.cameras.main.setBounds(
+            newSection.bounds.x,
+            newSection.bounds.y, 
+            newSection.bounds.width,
+            newSection.bounds.height
+        );
+        
+        // Smoothly pan camera to new section's starting position
+        this.cameras.main.pan(
+            newSection.cameraStart.x + newSection.bounds.width/2,
+            newSection.cameraStart.y + newSection.bounds.height/2,
+            1000,
+            'Power2'
+        );
+        
+        console.log(`Transitioned to section ${sectionNumber}`);
+    }
+
+    checkSectionTransition() {
+        let playerX = my.sprite.player.x;
+        let newSection = this.currentSection;
+        
+        // Determine which section player should be in
+        if (playerX < 480 && this.currentSection !== 1) {
+            newSection = 1;
+        } else if (playerX >= 480 && playerX < 960 && this.currentSection !== 2) {
+            newSection = 2;
+        }
+        // Add more section boundaries as needed
+        
+        // Transition if section changed
+        if (newSection !== this.currentSection) {
+            this.transitionToSection(newSection);
+        }
     }
 
     update() {
