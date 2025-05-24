@@ -15,7 +15,9 @@ class Platformer extends Phaser.Scene {
         this.crouching = false;
     }
 
-    
+    preload() {
+        this.load.scenePlugin('AnimatedTiles', './lib/AnimatedTiles.js', 'animatedTiles', 'animatedTiles');
+    }
 
     create() {
         this.map = this.add.tilemap("platformer-level-1", 16, 16, 60, 50);
@@ -51,6 +53,21 @@ class Platformer extends Phaser.Scene {
             key: "GEMS_Tiles",
             frame: 20
         });
+
+        // Create animation for coins created from Object layer
+        this.anims.create({
+                key: 'gemAnim', // Animation key
+                frames: this.anims.generateFrameNumbers('GEMS_Tiles', 
+                        {start: 20, end: 21}
+                ),
+                frameRate: 3,  // Higher is faster
+                repeat: -1      // Loop the animation indefinitely
+         });
+
+        // Play the same animation for every memeber of the 
+        // Object coins array
+        this.anims.play('gemAnim', this.gems);
+
         
         this.door = this.map.createFromObjects("Objects", {
             name: "DOOR",
@@ -156,6 +173,8 @@ class Platformer extends Phaser.Scene {
         this.cameras.main.startFollow(my.sprite.player, true, 0.25, 0.25);
         this.cameras.main.setDeadzone(50, 50);
         this.cameras.main.setZoom(this.SCALE+1);
+        
+        this.animatedTiles.init(this.map);
 
     }
 
