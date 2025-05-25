@@ -38,6 +38,8 @@ class Load extends Phaser.Scene {
             frameWidth: 16,
             frameHeight: 16
         });
+
+        this.load.multiatlas("kenny-particles", "kenny-particles.json");
     }
 
     create() {

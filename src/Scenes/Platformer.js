@@ -13,6 +13,7 @@ class Platformer extends Phaser.Scene {
         this.CRAWL_SPEED = 75;
         this.crouching = false;
         this.cameraPan = false;
+        this.PARTICLE_VELOCITY = 50;
 
         // Progressive section system
         this.currentSection = 1;
@@ -163,6 +164,18 @@ class Platformer extends Phaser.Scene {
         this.cameras.main.setZoom(3); // Adjusted zoom for better view
         
         this.animatedTiles.init(this.map);
+
+        my.vfx.walking = this.add.particles(0, 0, "kenny-particles", {
+            frame: ['window_01.png', 'window_02.png'],
+            random: true,
+            scale: {start: 0.02, end: 0.01},
+            maxAliveParticles: 50,
+            lifespan: 500,
+            gravityY: -10,
+            alpha: {start: 0.05, end: 0.01}, 
+        });
+
+        my.vfx.walking.stop();
     }
 
     createSectionGems() {
@@ -463,6 +476,18 @@ class Platformer extends Phaser.Scene {
                 my.sprite.player.body.velocity.x = -this.MAX_SPEED;
             }
 
+            my.vfx.walking.startFollow(my.sprite.player, my.sprite.player.displayWidth/2-10, 
+                                    my.sprite.player.displayHeight/2-5, false);
+
+            my.vfx.walking.setParticleSpeed(this.PARTICLE_VELOCITY, 0);
+
+            
+            if (my.sprite.player.body.blocked.down) {
+
+                my.vfx.walking.start();
+
+            }
+
         } else if(cursors.right.isDown) {
             if(my.sprite.player.body.velocity.x < 0) {
                 my.sprite.player.body.setVelocityX(my.sprite.player.body.velocity.x * 0.5);
@@ -479,6 +504,18 @@ class Platformer extends Phaser.Scene {
                 my.sprite.player.body.velocity.x = this.MAX_SPEED;
             }
 
+            my.vfx.walking.startFollow(my.sprite.player, my.sprite.player.displayWidth/2-20, 
+                                    my.sprite.player.displayHeight/2-5, false);
+
+            my.vfx.walking.setParticleSpeed(this.PARTICLE_VELOCITY, 0);
+
+            // Only play smoke effect if touching the ground
+            if (my.sprite.player.body.blocked.down) {
+
+                my.vfx.walking.start();
+
+            }
+
         } else if(this.crouching && cursors.down.isDown) {
             my.sprite.player.body.setAccelerationX(0);
             my.sprite.player.body.setDragX(this.DRAG);
@@ -488,6 +525,7 @@ class Platformer extends Phaser.Scene {
             my.sprite.player.body.setAccelerationX(0);
             my.sprite.player.body.setDragX(this.DRAG);
             if(canStandUp){
+                my.vfx.walking.stop();
                 my.sprite.player.anims.play('idle');
             }
         }
