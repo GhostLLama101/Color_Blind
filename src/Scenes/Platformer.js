@@ -11,12 +11,14 @@ class Platformer extends Phaser.Scene {
         this.MAX_SPEED = 350; 
         this.SCALE = 2.0;
         this.CRAWL_SPEED = 75;
-        this.gemsCollected = false;
         this.crouching = false;
         this.cameraPan = false;
 
+        // Progressive section system
         this.currentSection = 1;
+        this.maxUnlockedSection = 1;
         this.sectionTransitioned = false;
+        this.sectionGemsCollected = {}; // Track gems collected per section
     }
 
     preload() {
@@ -52,125 +54,36 @@ class Platformer extends Phaser.Scene {
 
         my.sprite.player.setDepth(10);
 
-        this.gems = this.map.createFromObjects("Objects", {
-            name: "GEM",
-            key: "GEMS_Tiles",
-            frame: 20
-        });
+        // Create gems organized by section
+        this.createSectionGems();
 
-        // Create animation for coins created from Object layer
-        this.anims.create({
-                key: 'gemAnim', // Animation key
-                frames: this.anims.generateFrameNumbers('GEMS_Tiles', 
-                        {start: 20, end: 21}
-                ),
-                frameRate: 3,  // Higher is faster
-                repeat: -1      // Loop the animation indefinitely
-         });
-
-        // Play the same animation for every memeber of the 
-        // Object coins array
-        this.anims.play('gemAnim', this.gems);
-
-        
-        this.door = this.map.createFromObjects("Objects", {
-            name: "DOOR",
-            key: "DOOR_CLOSED",
-            frame: 56,
-            visible: true
-        });
-
-        this.opendoor = this.map.createFromObjects("Objects", {
-            name: "OPEN_DOOR",
-            key: "OPEN_DOOR",
-            frame: 59,
-            visible: false
-        });
-
-        
-        // this.opendoor.setDepth(9);
+        // Create doors organized by section
+        this.createSectionDoors();
 
         my.sprite.player.setCollideWorldBounds(true);
 
         // Enable collision handling
         this.physics.add.collider(my.sprite.player, this.groundLayer);
-        this.physics.world.enable(this.gems, Phaser.Physics.Arcade.STATIC_BODY);
-        this.physics.world.enable(this.door, Phaser.Physics.Arcade.STATIC_BODY);
-        this.physics.world.enable(this.opendoor, Phaser.Physics.Arcade.STATIC_BODY); //need colision to excit the game.
 
-        this.gemGroup = this.add.group(this.gems);
-        this.doorGroup = this.add.group(this.door);
-        this.openDoorGroup = this.add.group(this.opendoor); 
+        // Setup gem collision for all sections
+        this.setupGemCollisions();
 
-
+        // Setup door collisions for all sections
+        this.setupDoorCollisions();
 
         let propertyCollider = (obj1, obj2) => {
             // Handle intersection with dangerous tiles
             if (obj2.properties.damage) {
-                my.sprite.player.x = spawnPoint.x;
-                my.sprite.player.y = spawnPoint.y;
+                // Respawn at current section's spawn point
+                let currentSpawn = this.getSectionSpawnPoint(this.currentSection);
+                my.sprite.player.x = currentSpawn.x;
+                my.sprite.player.y = currentSpawn.y;
                 console.log("Player hit spikes! Respawning...");
                 my.sprite.player.body.setVelocity(0, 0);
             }
-            // Could add handlers for other types of tiles here
         }
 
         this.physics.add.overlap(my.sprite.player, this.groundLayer, propertyCollider);
-
-        this.physics.add.overlap(my.sprite.player, this.gemGroup, (obj1, obj2) => {
-            obj2.destroy(); 
-
-            if(this.gemGroup.children.size === 0) {
-                this.gemsCollected = true;
-                
-                // Handle door swap immediately when all gems collected
-                if (!this.doorsSwapped) {
-                    this.doorsSwapped = true;
-                    
-                    // Show and position open doors
-                    this.opendoor.forEach(opendoor => {
-                        opendoor.setVisible(true);
-                    });
-                    
-                    // Destroy closed doors
-                    this.door.forEach(door => {
-                        door.destroy();
-                    });
-                    
-                    // Clear the door array
-                    this.door = [];
-                }
-            }
-        });
-
-        this.physics.add.overlap(my.sprite.player, this.door, (obj1, obj2) => {
-            if(!this.gemsCollected) {
-                //TODO: display need to collect power gems. 
-                
-            }
-        });
-
-        this.physics.add.overlap(my.sprite.player, this.opendoor, (obj1,obj2) => {
-            if(this.gemsCollected && !this.sectionTransitioned) { 
-                this.sectionTransitioned = true;
-
-                spawnPoint = this.map.findObject("Objects", obj => obj.name === "2spawn");
-
-                setTimeout(() => {
-                    if(!this.cameraPan){
-                        this.cameraPan = true;
-                        console.log('going to  section 2');
-                        my.sprite.player.x = spawnPoint.x;
-                        my.sprite.player.y = spawnPoint.y;
-                        
-                        this.transitionToSection(2);
-                        
-                    }
-                }, 2000);
-
-                // OPTIONAL: add a fade in and out effect to transition levels?
-            }
-        });
 
         // set up Phaser-provided cursor key input
         cursors = this.input.keyboard.createCursorKeys();
@@ -182,18 +95,33 @@ class Platformer extends Phaser.Scene {
 
         this.originalHeight = my.sprite.player.height; 
 
-        //Define your level sections - adjust these values to match your level layout
+        // Define your level sections - adjust these values to match your level layout
         this.sections = {
             1: {
-                bounds: { x: 0, y: 0, width: 960, height: 800 }, // First section bounds
-                cameraStart: { x: 0, y: 300 } // Where camera focuses in this section
+                bounds: { x: 0, y: 0, width: 960, height: 800 },
+                cameraStart: { x: 0, y: 300 },
+                spawnPoint: "spawn",
+                nextSection: 2
             },
             2: {
-                bounds: { x: 0, y: 0, width: 960, height: 400 }, // Second section bounds  
-                cameraStart: { x: 0, y: 300 } // Where camera focuses in this section
+                bounds: { x: 0, y: 0, width: 960, height: 400 },
+                cameraStart: { x: 0, y: 300 },
+                spawnPoint: "2spawn",
+                nextSection: 3
+            },
+            3: {
+                bounds: { x: 0, y: 0, width: 960, height: 600 },
+                cameraStart: { x: 0, y: 200 },
+                spawnPoint: "3spawn",
+                nextSection: null // No next section (end of game)
             }
             // Add more sections as needed
         };
+
+        // Initialize section gems tracking
+        for (let sectionNum in this.sections) {
+            this.sectionGemsCollected[sectionNum] = false;
+        }
 
         // Set initial camera bounds for section 1
         let initialSection = this.sections[this.currentSection];
@@ -219,6 +147,223 @@ class Platformer extends Phaser.Scene {
         this.animatedTiles.init(this.map);
     }
 
+    createSectionGems() {
+        // Create gems for each section
+        this.sectionGems = {};
+        this.sectionGemGroups = {};
+
+        for (let sectionNum = 1; sectionNum <= 3; sectionNum++) {
+            // Look for gems specific to this section
+            this.sectionGems[sectionNum] = this.map.createFromObjects("Objects", {
+                name: `GEM_S${sectionNum}`, // Gems named like GEM_S1, GEM_S2, etc.
+                key: "GEMS_Tiles",
+                frame: 20
+            });
+
+            // If no section-specific gems found, fall back to generic gems for section 1
+            if (this.sectionGems[sectionNum].length === 0 && sectionNum === 1) {
+                this.sectionGems[sectionNum] = this.map.createFromObjects("Objects", {
+                    name: "GEM",
+                    key: "GEMS_Tiles",
+                    frame: 20
+                });
+            }
+
+            // Create physics bodies and groups
+            if (this.sectionGems[sectionNum].length > 0) {
+                this.physics.world.enable(this.sectionGems[sectionNum], Phaser.Physics.Arcade.STATIC_BODY);
+                this.sectionGemGroups[sectionNum] = this.add.group(this.sectionGems[sectionNum]);
+
+                // Create gem animation
+                this.anims.create({
+                    key: `gemAnim_S${sectionNum}`,
+                    frames: this.anims.generateFrameNumbers('GEMS_Tiles', {start: 20, end: 21}),
+                    frameRate: 3,
+                    repeat: -1
+                });
+
+                // Play animation
+                this.anims.play(`gemAnim_S${sectionNum}`, this.sectionGems[sectionNum]);
+            } else {
+                this.sectionGemGroups[sectionNum] = this.add.group([]);
+            }
+        }
+    }
+
+    createSectionDoors() {
+        // Create doors for each section
+        this.sectionDoors = {};
+        this.sectionOpenDoors = {};
+        this.sectionDoorGroups = {};
+        this.sectionOpenDoorGroups = {};
+
+        for (let sectionNum = 1; sectionNum <= 3; sectionNum++) {
+            // Closed doors
+            this.sectionDoors[sectionNum] = this.map.createFromObjects("Objects", {
+                name: `DOOR_S${sectionNum}`, // Doors named like DOOR_S1, DOOR_S2, etc.
+                key: "DOOR_CLOSED",
+                frame: 56,
+                visible: true
+            });
+
+            // If no section-specific doors found, fall back to generic door for section 1
+            if (this.sectionDoors[sectionNum].length === 0 && sectionNum === 1) {
+                this.sectionDoors[sectionNum] = this.map.createFromObjects("Objects", {
+                    name: "DOOR",
+                    key: "DOOR_CLOSED",
+                    frame: 56,
+                    visible: true
+                });
+            }
+
+            // Open doors
+            this.sectionOpenDoors[sectionNum] = this.map.createFromObjects("Objects", {
+                name: `OPEN_DOOR_S${sectionNum}`, // Open doors named like OPEN_DOOR_S1, etc.
+                key: "OPEN_DOOR",
+                frame: 59,
+                visible: false
+            });
+
+            // If no section-specific open doors found, fall back to generic open door for section 1
+            if (this.sectionOpenDoors[sectionNum].length === 0 && sectionNum === 1) {
+                this.sectionOpenDoors[sectionNum] = this.map.createFromObjects("Objects", {
+                    name: "OPEN_DOOR",
+                    key: "OPEN_DOOR",
+                    frame: 59,
+                    visible: false
+                });
+            }
+
+            // Create physics bodies and groups
+            if (this.sectionDoors[sectionNum].length > 0) {
+                this.physics.world.enable(this.sectionDoors[sectionNum], Phaser.Physics.Arcade.STATIC_BODY);
+                this.sectionDoorGroups[sectionNum] = this.add.group(this.sectionDoors[sectionNum]);
+            }
+
+            if (this.sectionOpenDoors[sectionNum].length > 0) {
+                this.physics.world.enable(this.sectionOpenDoors[sectionNum], Phaser.Physics.Arcade.STATIC_BODY);
+                this.sectionOpenDoorGroups[sectionNum] = this.add.group(this.sectionOpenDoors[sectionNum]);
+            }
+        }
+    }
+
+    setupGemCollisions() {
+        // Setup gem collision for each section
+        for (let sectionNum in this.sectionGemGroups) {
+            if (this.sectionGemGroups[sectionNum].children.size > 0) {
+                this.physics.add.overlap(my.sprite.player, this.sectionGemGroups[sectionNum], 
+                    (obj1, obj2) => this.collectGem(obj1, obj2, sectionNum));
+            }
+        }
+    }
+
+    setupDoorCollisions() {
+        // Setup door collision for each section
+        for (let sectionNum in this.sectionDoorGroups) {
+            // Closed door collision
+            if (this.sectionDoorGroups[sectionNum] && this.sectionDoorGroups[sectionNum].children.size > 0) {
+                this.physics.add.overlap(my.sprite.player, this.sectionDoorGroups[sectionNum], 
+                    (obj1, obj2) => this.tryEnterDoor(obj1, obj2, sectionNum));
+            }
+
+            // Open door collision
+            if (this.sectionOpenDoorGroups[sectionNum] && this.sectionOpenDoorGroups[sectionNum].children.size > 0) {
+                this.physics.add.overlap(my.sprite.player, this.sectionOpenDoorGroups[sectionNum], 
+                    (obj1, obj2) => this.enterOpenDoor(obj1, obj2, sectionNum));
+            }
+        }
+    }
+
+    collectGem(player, gem, sectionNum) {
+        gem.destroy();
+
+        // Check if all gems in this section are collected
+        if (this.sectionGemGroups[sectionNum].children.size === 0) {
+            this.sectionGemsCollected[sectionNum] = true;
+            console.log(`All gems collected in section ${sectionNum}!`);
+            
+            // Unlock the door for this section
+            this.unlockSectionDoor(sectionNum);
+            
+            // Unlock next section if it exists
+            let nextSection = this.sections[sectionNum].nextSection;
+            if (nextSection && nextSection > this.maxUnlockedSection) {
+                this.maxUnlockedSection = nextSection;
+                console.log(`Section ${nextSection} unlocked!`);
+            }
+        }
+    }
+
+    unlockSectionDoor(sectionNum) {
+        // Show open doors
+        if (this.sectionOpenDoors[sectionNum]) {
+            this.sectionOpenDoors[sectionNum].forEach(door => {
+                door.setVisible(true);
+            });
+        }
+
+        // Hide/destroy closed doors
+        if (this.sectionDoors[sectionNum]) {
+            this.sectionDoors[sectionNum].forEach(door => {
+                door.destroy();
+            });
+            this.sectionDoors[sectionNum] = [];
+        }
+    }
+
+    tryEnterDoor(player, door, sectionNum) {
+        if (!this.sectionGemsCollected[sectionNum]) {
+            // TODO: Display message "Collect all gems to unlock!"
+            console.log(`Need to collect all gems in section ${sectionNum} first!`);
+        }
+    }
+
+    enterOpenDoor(player, door, sectionNum) {
+        if (this.sectionGemsCollected[sectionNum] && !this.sectionTransitioned) {
+            let nextSection = this.sections[sectionNum].nextSection;
+            
+            if (nextSection && nextSection <= this.maxUnlockedSection) {
+                this.sectionTransitioned = true;
+                
+                setTimeout(() => {
+                    if (!this.cameraPan) {
+                        this.cameraPan = true;
+                        console.log(`Going to section ${nextSection}`);
+                        
+                        // Move player to next section's spawn point
+                        let nextSpawn = this.getSectionSpawnPoint(nextSection);
+                        my.sprite.player.x = nextSpawn.x;
+                        my.sprite.player.y = nextSpawn.y;
+                        
+                        // Transition to next section
+                        this.transitionToSection(nextSection);
+                        
+                        // Reset transition flags for next use
+                        this.sectionTransitioned = false;
+                        this.cameraPan = false;
+                    }
+                }, 2000);
+            } else if (!nextSection) {
+                console.log("Congratulations! You've completed all sections!");
+                // TODO: Add game completion logic
+            } else {
+                console.log(`Section ${nextSection} is still locked!`);
+            }
+        }
+    }
+
+    getSectionSpawnPoint(sectionNum) {
+        let spawnName = this.sections[sectionNum].spawnPoint;
+        let spawnPoint = this.map.findObject("Objects", obj => obj.name === spawnName);
+        
+        if (spawnPoint) {
+            return { x: spawnPoint.x, y: spawnPoint.y };
+        } else {
+            // Fallback spawn point
+            return { x: 100, y: 600 };
+        }
+    }
+
     transitionToSection(sectionNumber) {
         this.currentSection = sectionNumber;
         let newSection = this.sections[sectionNumber];
@@ -242,26 +387,7 @@ class Platformer extends Phaser.Scene {
         console.log(`Transitioned to section ${sectionNumber}`);
     }
 
-    checkSectionTransition() {
-        let playerX = my.sprite.player.x;
-        let newSection = this.currentSection;
-        
-        // Determine which section player should be in
-        if (playerX < 480 && this.currentSection !== 1) {
-            newSection = 1;
-        } else if (playerX >= 480 && playerX < 960 && this.currentSection !== 2) {
-            newSection = 2;
-        }
-        // Add more section boundaries as needed
-        
-        // Transition if section changed
-        if (newSection !== this.currentSection) {
-            this.transitionToSection(newSection);
-        }
-    }
-
     update() {
-        //Claud
         let canStandUp = true;
         if(this.crouching) {
             const tileAbove = this.groundLayer.getTileAtWorldXY(
@@ -277,7 +403,7 @@ class Platformer extends Phaser.Scene {
         } else {
             this.MAX_SPEED = 350;
         }
-        //Claud
+
         if(cursors.down.isDown && my.sprite.player.body.blocked.down){
             my.sprite.player.anims.play('crouch', true);
         
@@ -292,16 +418,13 @@ class Platformer extends Phaser.Scene {
             }
             
         } else if(this.crouching && (!cursors.down.isDown || !my.sprite.player.body.blocked.down) && canStandUp) {
-            // Only reset from crouching if the player CAN stand up (no ceiling above)
             this.crouching = false;
             
-            // Reset hitbox to original size with no offset
             my.sprite.player.body.setSize(my.sprite.player.width, this.originalHeight, false);
             my.sprite.player.body.setOffset(0, 0);
         }
         
         if(cursors.left.isDown) {
-            // const accel = this.crouching ? this.ACCELERATION * 0.5 : this.ACCELERATION;
             if(my.sprite.player.body.velocity.x > 0) {
                 my.sprite.player.body.setVelocityX(my.sprite.player.body.velocity.x * 0.5);
             }
@@ -326,7 +449,7 @@ class Platformer extends Phaser.Scene {
             my.sprite.player.anims.play('walk', true);
 
             if(this.crouching){
-                my.sprite.player.body.setSize(my.sprite.player.width, my.sprite.player.height * 0.5, false); // need to change this to make the bouns shrink from the top
+                my.sprite.player.body.setSize(my.sprite.player.width, my.sprite.player.height * 0.5, false);
                 my.sprite.player.anims.play('crouch',true);
             }
             if (my.sprite.player.body.velocity.x > this.MAX_SPEED) {
@@ -339,16 +462,14 @@ class Platformer extends Phaser.Scene {
             my.sprite.player.anims.play('crouch');
 
         } else {
-            // this.crouching = false;
             my.sprite.player.body.setAccelerationX(0);
             my.sprite.player.body.setDragX(this.DRAG);
             if(canStandUp){
                 my.sprite.player.anims.play('idle');
             }
-            // add the crouch and lie down on your soamac after a couble seconds.
         }
-            // player.anims.getCurrentKey() === 'crouch'
-        if(!canStandUp){ //crouched cant jump
+
+        if(!canStandUp){
             cursors.up.enabled = false;
         }
         else {
