@@ -14,6 +14,7 @@ class Platformer extends Phaser.Scene {
         this.crouching = false;
         this.cameraPan = false;
         this.PARTICLE_VELOCITY = 50;
+        this.wasGrounded = true;
 
         // Progressive section system
         this.currentSection = 1;
@@ -176,6 +177,20 @@ class Platformer extends Phaser.Scene {
         });
 
         my.vfx.walking.stop();
+
+        my.vfx.jumping = this.add.particles(0, 0, "kenny-particles", {
+            frame: ['smoke_01.png', 'smoke_10.png'],
+            random: true,
+            scale: {start: 0.01, end: 0.05},
+            maxAliveParticles: 300, // Double the particles
+            lifespan: 200, // Make them last longer
+            gravityY: -20,
+            alpha: {start: 0.5, end: 0.01},
+            speedX: {min: -100, max: 100}, // Spread particles horizontally
+            speedY: {min: -150, max: -50}, // Vary vertical speed
+        });
+
+        my.vfx.jumping.stop();
     }
 
     createSectionGems() {
@@ -536,11 +551,36 @@ class Platformer extends Phaser.Scene {
         else {
             cursors.up.enabled = true;
         }
-        if(!my.sprite.player.body.blocked.down) {
+        // if(!my.sprite.player.body.blocked.down) {
+        //      my.vfx.jumping.setPosition(my.sprite.player.x, my.sprite.player.y + my.sprite.player.displayHeight/2);
+        //     my.vfx.jumping.explode(50);
+        //     my.sprite.player.anims.play('jump');
+        // }
+        // if(my.sprite.player.body.blocked.down && Phaser.Input.Keyboard.JustDown(cursors.up)) {
+        //     my.sprite.player.body.setVelocityY(this.JUMP_VELOCITY);
+        // }
+        let isGrounded = my.sprite.player.body.blocked.down;
+    
+        if (!isGrounded && this.wasGrounded) {
+            // Player just started jumping/falling - play particle effect once
+            my.vfx.jumping.setPosition(my.sprite.player.x, my.sprite.player.y + my.sprite.player.displayHeight/2);
+            my.vfx.jumping.explode(50);
             my.sprite.player.anims.play('jump');
+        } else if (isGrounded && !this.wasGrounded) {
+            // Player just landed - you could add landing particles here if wanted
         }
-        if(my.sprite.player.body.blocked.down && Phaser.Input.Keyboard.JustDown(cursors.up)) {
+        
+        // Update the grounded state for next frame
+        this.wasGrounded = isGrounded;
+        
+        // Handle jump input
+        if(isGrounded && Phaser.Input.Keyboard.JustDown(cursors.up)) {
             my.sprite.player.body.setVelocityY(this.JUMP_VELOCITY);
+        }
+        
+        // Continue with animation updates for when not grounded
+        if (!isGrounded) {
+            my.sprite.player.anims.play('jump');
         }
     }
 }
