@@ -26,7 +26,7 @@ class Platformer extends Phaser.Scene {
     }
 
     create() {
-        this.map = this.add.tilemap("platformer-level-1", 16, 16, 60, 50);
+        this.map = this.add.tilemap("platformer-level-1", 16, 16, 180, 60);
 
         this.tileset = this.map.addTilesetImage("monoChrome_tiles_packed", "platformer_tiles");
 
@@ -61,6 +61,8 @@ class Platformer extends Phaser.Scene {
         this.createSectionDoors();
 
         my.sprite.player.setCollideWorldBounds(true);
+
+        this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
 
         // Enable collision handling
         this.physics.add.collider(my.sprite.player, this.groundLayer);
@@ -98,7 +100,7 @@ class Platformer extends Phaser.Scene {
         // Define your level sections - adjust these values to match your level layout
         this.sections = {
             1: {
-                bounds: { x: 0, y: 0, width: 960, height: 800 },
+                bounds: { x: 0, y: 400, width: 960, height: 400 },
                 cameraStart: { x: 0, y: 300 },
                 spawnPoint: "spawn",
                 nextSection: 2
@@ -110,12 +112,29 @@ class Platformer extends Phaser.Scene {
                 nextSection: 3
             },
             3: {
-                bounds: { x: 0, y: 0, width: 960, height: 600 },
-                cameraStart: { x: 0, y: 200 },
+                bounds: { x: 912, y: 0, width: 960, height: 400 },
+                cameraStart: { x: 0, y: 300 },
                 spawnPoint: "3spawn",
-                nextSection: null // No next section (end of game)
+                nextSection: 4 // No next section (end of game)
+            },
+            4: {
+                bounds: { x: 912, y: 400, width: 960, height: 400 },
+                cameraStart: { x: 0, y: 300 },
+                spawnPoint: "4spawn",
+                nextSection: 5 
+            },
+            5: {
+                bounds: { x: 912*2, y: 400, width: 1060, height: 400 },
+                cameraStart: { x: 0, y: 300 },
+                spawnPoint: "5spawn",
+                nextSection: 6 
+            },
+            6: {
+                bounds: { x: 912*2, y: 0, width: 1060, height: 400 },
+                cameraStart: { x: 0, y: 300 },
+                spawnPoint: "6spawn",
+                nextSection: null 
             }
-            // Add more sections as needed
         };
 
         // Initialize section gems tracking
@@ -123,7 +142,7 @@ class Platformer extends Phaser.Scene {
             this.sectionGemsCollected[sectionNum] = false;
         }
 
-        // Set initial camera bounds for section 1
+        // SECTIONED CAMERA MODE - Focus on bottom left section (Section 1)
         let initialSection = this.sections[this.currentSection];
         this.cameras.main.setBounds(
             initialSection.bounds.x, 
@@ -132,17 +151,16 @@ class Platformer extends Phaser.Scene {
             initialSection.bounds.height
         );
 
-        // Start camera at ground level of current section
-        let groundCameraY = 600;
+        // Position camera to show the bottom left section properly
         this.cameras.main.setScroll(
-            playerSpawnX - 400, 
-            groundCameraY - 300
+            initialSection.bounds.x, 
+            initialSection.bounds.y
         );
 
         // Set up following with custom deadzone
         this.cameras.main.startFollow(my.sprite.player, true, 0.08, 0.05);
         this.cameras.main.setDeadzone(100, 100);
-        this.cameras.main.setZoom(this.SCALE + 1);
+        this.cameras.main.setZoom(3); // Adjusted zoom for better view
         
         this.animatedTiles.init(this.map);
     }
@@ -152,7 +170,7 @@ class Platformer extends Phaser.Scene {
         this.sectionGems = {};
         this.sectionGemGroups = {};
 
-        for (let sectionNum = 1; sectionNum <= 3; sectionNum++) {
+        for (let sectionNum = 1; sectionNum <= 6; sectionNum++) {
             // Look for gems specific to this section
             this.sectionGems[sectionNum] = this.map.createFromObjects("Objects", {
                 name: `GEM_S${sectionNum}`, // Gems named like GEM_S1, GEM_S2, etc.
@@ -197,7 +215,7 @@ class Platformer extends Phaser.Scene {
         this.sectionDoorGroups = {};
         this.sectionOpenDoorGroups = {};
 
-        for (let sectionNum = 1; sectionNum <= 3; sectionNum++) {
+        for (let sectionNum = 1; sectionNum <= 6; sectionNum++) {
             // Closed doors
             this.sectionDoors[sectionNum] = this.map.createFromObjects("Objects", {
                 name: `DOOR_S${sectionNum}`, // Doors named like DOOR_S1, DOOR_S2, etc.
@@ -378,11 +396,16 @@ class Platformer extends Phaser.Scene {
         
         // Smoothly pan camera to new section's starting position
         this.cameras.main.pan(
-            newSection.cameraStart.x + newSection.bounds.width/2,
-            newSection.cameraStart.y + newSection.bounds.height/2,
+            newSection.bounds.x + newSection.bounds.width/2,
+            newSection.bounds.y + newSection.bounds.height/2,
             1000,
             'Power2'
         );
+        
+        // Update current section indicator
+        if (this.currentSectionText) {
+            this.currentSectionText.setText(`Current Section: ${sectionNumber}`);
+        }
         
         console.log(`Transitioned to section ${sectionNumber}`);
     }
