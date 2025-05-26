@@ -34,6 +34,7 @@ class Platformer extends Phaser.Scene {
         this.tileset = this.map.addTilesetImage("monoChrome_tiles_packed", "platformer_tiles");
 
         this.groundLayer = this.map.createLayer("floor", this.tileset, 0, 0);
+        this.backgroundLayer = this.map.createLayer("background",this.tileset,0,0);
 
         let spawnPoint = this.map.findObject("Objects", obj => obj.name === "spawn");
         let playerSpawnX = 100; 
@@ -93,10 +94,10 @@ class Platformer extends Phaser.Scene {
         // set up Phaser-provided cursor key input
         cursors = this.input.keyboard.createCursorKeys();
 
-        this.input.keyboard.on('keydown-D', () => {
-            this.physics.world.drawDebug = this.physics.world.drawDebug ? false : true
-            this.physics.world.debugGraphic.clear()
-        }, this);
+        // this.input.keyboard.on('keydown-D', () => {
+        //     this.physics.world.drawDebug = this.physics.world.drawDebug ? false : true
+        //     this.physics.world.debugGraphic.clear()
+        // }, this);
 
         this.originalHeight = my.sprite.player.height; 
 
@@ -275,7 +276,7 @@ class Platformer extends Phaser.Scene {
             {
                 fontSize: '18px',
                 fill: '#FFFFFF',
-                fontFamily: 'Times',
+                fontFamily: 'Goudy Bookletter 1911',
                 align: 'center'
             }
         ).setOrigin(0.5).setScrollFactor(0).setVisible(false);
@@ -287,7 +288,7 @@ class Platformer extends Phaser.Scene {
             {
                 fontSize: '20px',
                 fill: '#FFFFFF',
-                fontFamily: 'Times'
+                fontFamily: 'Goudy Bookletter 1911'
             }
         ).setOrigin(0.5).setScrollFactor(0).setVisible(false);
         
