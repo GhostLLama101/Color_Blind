@@ -15,16 +15,13 @@ class Platformer extends Phaser.Scene {
         this.cameraPan = false;
         this.PARTICLE_VELOCITY = 50;
         this.wasGrounded = true;
-
-        // Audio timing
         this.walkSoundTimer = 0;
-        this.WALK_SOUND_DELAY = 400; // Delay in milliseconds between walk sounds
-
-        // Progressive section system
+        this.WALK_SOUND_DELAY = 400; 
+        this.gameStarted = false;
         this.currentSection = 1;
         this.maxUnlockedSection = 1;
         this.sectionTransitioned = false;
-        this.sectionGemsCollected = {}; // Track gems collected per section
+        this.sectionGemsCollected = {}; 
     }
 
     preload() {
@@ -248,9 +245,59 @@ class Platformer extends Phaser.Scene {
                 fontFamily: 'Arial'
             }
         ).setOrigin(0.5).setScrollFactor(0).setVisible(false);
+
+        // START SCREEN UI ELEMENTS - Fixed positioning and styling
+        // Background overlay for start screen
+        this.startOverlay = this.add.rectangle(
+            this.cameras.main.centerX, 
+            this.cameras.main.centerY, 
+            this.cameras.main.width, 
+            this.cameras.main.height, 
+            0x000000, 
+            0.8
+        ).setScrollFactor(0).setVisible(false);
+
+        this.title = this.add.text(
+            this.cameras.main.centerX,
+            this.cameras.main.centerY -80,
+            'COLOR BLIND',
+            {
+                fontSize: '48px',
+                fill: '#FFFFFF',
+                fontFamily: 'Times'
+            }
+        ).setOrigin(0.5).setScrollFactor(0).setVisible(false);
+
+        this.control = this.add.text(
+            this.cameras.main.centerX,
+            this.cameras.main.centerY -20,
+            'Arrow Keys: Move\nUp Arrow: Jump\nDown Arrow: Crouch\nCollect all gems to unlock doors!',
+            {
+                fontSize: '18px',
+                fill: '#FFFFFF',
+                fontFamily: 'Times',
+                align: 'center'
+            }
+        ).setOrigin(0.5).setScrollFactor(0).setVisible(false);
+        
+        this.startText = this.add.text(
+            this.cameras.main.centerX,
+            this.cameras.main.centerY +60,
+            'click SPACE to start',
+            {
+                fontSize: '20px',
+                fill: '#FFFFFF',
+                fontFamily: 'Times'
+            }
+        ).setOrigin(0.5).setScrollFactor(0).setVisible(false);
+        
         
         // Set up replay key
         this.replayKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+
+        this.startKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
+
+        this.showStartScreen();
     }
 
     createSectionGems() {
@@ -465,6 +512,44 @@ class Platformer extends Phaser.Scene {
             }
         }
     }
+    showStartScreen()  {
+
+        this.startOverlay.setVisible(true);
+        this.title.setVisible(true);
+        this.control.setVisible(true);
+        this.startText.setVisible(true);
+
+        this.startOverlay.setDepth(1000);
+        this.title.setDepth(1001);
+        this.control.setDepth(1001);
+        this.startText.setDepth(1001);
+
+        this.physics.pause();
+
+        this.tweens.add({
+            targets: this.startText,
+            alpha: 0.3,
+            duration: 800,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+    }
+
+    startLevel() {
+        this.startOverlay.setVisible(false);
+        this.title.setVisible(false);
+        this.control.setVisible(false);
+        this.startText.setVisible(false);
+        
+        // Stop any tweens
+        this.tweens.killAll();
+        
+        this.gameStarted = true;
+
+        // Resume physics if paused
+        this.physics.resume();
+    }
 
     showLevelComplete() {
         // Show all completion UI elements
@@ -494,37 +579,6 @@ class Platformer extends Phaser.Scene {
     }
 
     replayLevel() {
-        // Hide completion UI
-        this.completeOverlay.setVisible(false);
-        this.completeText.setVisible(false);
-        this.replayText.setVisible(false);
-        
-        // Stop any tweens
-        this.tweens.killAll();
-        
-        // Resume physics if paused
-        this.physics.resume();
-        
-        // Reset game state
-        this.currentSection = 1;
-        this.maxUnlockedSection = 1;
-        this.sectionTransitioned = false;
-        
-        // Reset section gems tracking
-        for (let sectionNum in this.sections) {
-            this.sectionGemsCollected[sectionNum] = false;
-        }
-        
-        // Move player back to starting position
-        let startSpawn = this.getSectionSpawnPoint(1);
-        my.sprite.player.x = startSpawn.x;
-        my.sprite.player.y = startSpawn.y;
-        my.sprite.player.body.setVelocity(0, 0);
-        
-        // Reset camera to first section
-        this.transitionToSection(1);
-        
-        // Recreate gems and doors
         this.scene.restart();
     }
 
@@ -569,6 +623,18 @@ class Platformer extends Phaser.Scene {
     }
 
     update() {
+
+        // UPDATED: Check for start key press before game starts
+        if (!this.gameStarted && Phaser.Input.Keyboard.JustDown(this.startKey)) {
+            this.startLevel();
+            return; // Exit early if game hasn't started yet
+        }
+
+        // Only process game logic if the game has started
+        if (!this.gameStarted) {
+            return;
+        }
+
         let canStandUp = true;
         if(this.crouching) {
             const tileAbove = this.groundLayer.getTileAtWorldXY(
