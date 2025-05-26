@@ -16,6 +16,10 @@ class Platformer extends Phaser.Scene {
         this.PARTICLE_VELOCITY = 50;
         this.wasGrounded = true;
 
+        // Audio timing
+        this.walkSoundTimer = 0;
+        this.WALK_SOUND_DELAY = 400; // Delay in milliseconds between walk sounds
+
         // Progressive section system
         this.currentSection = 1;
         this.maxUnlockedSection = 1;
@@ -191,6 +195,62 @@ class Platformer extends Phaser.Scene {
         });
 
         my.vfx.jumping.stop();
+
+        my.vfx.coin_Collect = this.add.particles(20, 20, "kenny-particles", {
+            frame: ['magic_01.png', 'magic_04.png'],
+            random: true,
+            scale: {start: 0.01, end: 0.05},
+            maxAliveParticles: 300, // Double the particles
+            lifespan: 200, // Make them last longer
+            gravityY: 10,
+            alpha: {start: 1, end: 0.01},
+        });
+
+        my.vfx.coin_Collect.stop();
+
+        // Create audio objects
+        this.walkSound = this.sound.add('walkSound', { volume: 0.3 });
+        this.jumpSound = this.sound.add('jumpSound', { volume: 0.5 });
+        this.gemSound = this.sound.add('gemSound', { volume: 0.7 });
+        
+        // Background overlay
+        this.completeOverlay = this.add.rectangle(
+            this.cameras.main.centerX, 
+            this.cameras.main.centerY, 
+            this.cameras.main.width, 
+            this.cameras.main.height, 
+            0x000000, 
+            0.7
+        ).setScrollFactor(0).setVisible(false);
+        
+        // Level complete text
+        this.completeText = this.add.text(
+            this.cameras.main.centerX, 
+            this.cameras.main.centerY - 50, 
+            'LEVEL COMPLETE!', 
+            {
+                fontSize: '48px',
+                fill: '#FFD700',
+                fontFamily: 'Arial',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        ).setOrigin(0.5).setScrollFactor(0).setVisible(false);
+        
+        // Replay instruction text
+        this.replayText = this.add.text(
+            this.cameras.main.centerX, 
+            this.cameras.main.centerY + 20, 
+            'Press R to Replay Level', 
+            {
+                fontSize: '24px',
+                fill: '#FFFFFF',
+                fontFamily: 'Arial'
+            }
+        ).setOrigin(0.5).setScrollFactor(0).setVisible(false);
+        
+        // Set up replay key
+        this.replayKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     }
 
     createSectionGems() {
@@ -321,6 +381,12 @@ class Platformer extends Phaser.Scene {
     }
 
     collectGem(player, gem, sectionNum) {
+        my.vfx.coin_Collect.setPosition(gem.x, gem.y);
+        my.vfx.coin_Collect.explode(30); // Burst of 30 particles
+        
+        // Play gem collection sound
+        this.gemSound.play();
+       
         gem.destroy();
 
         // Check if all gems in this section are collected
@@ -390,12 +456,76 @@ class Platformer extends Phaser.Scene {
                     }
                 }, 2000);
             } else if (!nextSection) {
-                console.log("Congratulations! You've completed all sections!");
-                // TODO: Add game completion logic
+                // Show level complete screen instead of console.log
+                setTimeout(() => {
+                    this.showLevelComplete();
+                }, 1000); // Small delay for dramatic effect
             } else {
                 console.log(`Section ${nextSection} is still locked!`);
             }
         }
+    }
+
+    showLevelComplete() {
+        // Show all completion UI elements
+        this.completeOverlay.setVisible(true);
+        this.completeText.setVisible(true);
+        this.replayText.setVisible(true);
+        
+        // Bring UI to front individually
+        this.completeOverlay.setDepth(1000);
+        this.completeText.setDepth(1001);
+        this.replayText.setDepth(1001);
+        
+        // Optional: Pause the game physics
+        this.physics.pause();
+
+        // Make replay text blink
+        this.tweens.add({
+            targets: this.replayText,
+            alpha: 0.3,
+            duration: 800,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+        
+        console.log("Level Complete! Press R to replay.");
+    }
+
+    replayLevel() {
+        // Hide completion UI
+        this.completeOverlay.setVisible(false);
+        this.completeText.setVisible(false);
+        this.replayText.setVisible(false);
+        
+        // Stop any tweens
+        this.tweens.killAll();
+        
+        // Resume physics if paused
+        this.physics.resume();
+        
+        // Reset game state
+        this.currentSection = 1;
+        this.maxUnlockedSection = 1;
+        this.sectionTransitioned = false;
+        
+        // Reset section gems tracking
+        for (let sectionNum in this.sections) {
+            this.sectionGemsCollected[sectionNum] = false;
+        }
+        
+        // Move player back to starting position
+        let startSpawn = this.getSectionSpawnPoint(1);
+        my.sprite.player.x = startSpawn.x;
+        my.sprite.player.y = startSpawn.y;
+        my.sprite.player.body.setVelocity(0, 0);
+        
+        // Reset camera to first section
+        this.transitionToSection(1);
+        
+        // Recreate gems and doors
+        this.scene.restart();
     }
 
     getSectionSpawnPoint(sectionNum) {
@@ -496,11 +626,17 @@ class Platformer extends Phaser.Scene {
 
             my.vfx.walking.setParticleSpeed(this.PARTICLE_VELOCITY, 0);
 
-            
             if (my.sprite.player.body.blocked.down) {
-
                 my.vfx.walking.start();
-
+                
+                // Update walk sound timer
+                this.walkSoundTimer += this.game.loop.delta;
+                
+                // Play sound if enough time has passed
+                if (this.walkSoundTimer >= this.WALK_SOUND_DELAY) {
+                    this.walkSound.play();
+                    this.walkSoundTimer = 0; // Reset timer
+                }
             }
 
         } else if(cursors.right.isDown) {
@@ -524,11 +660,17 @@ class Platformer extends Phaser.Scene {
 
             my.vfx.walking.setParticleSpeed(this.PARTICLE_VELOCITY, 0);
 
-            // Only play smoke effect if touching the ground
             if (my.sprite.player.body.blocked.down) {
-
                 my.vfx.walking.start();
-
+                
+                // Update walk sound timer
+                this.walkSoundTimer += this.game.loop.delta;
+                
+                // Play sound if enough time has passed
+                if (this.walkSoundTimer >= this.WALK_SOUND_DELAY) {
+                    this.walkSound.play();
+                    this.walkSoundTimer = 0; // Reset timer
+                }
             }
 
         } else if(this.crouching && cursors.down.isDown) {
@@ -541,6 +683,7 @@ class Platformer extends Phaser.Scene {
             my.sprite.player.body.setDragX(this.DRAG);
             if(canStandUp){
                 my.vfx.walking.stop();
+                this.walkSoundTimer = 0; // Reset timer when stopping
                 my.sprite.player.anims.play('idle');
             }
         }
@@ -551,14 +694,7 @@ class Platformer extends Phaser.Scene {
         else {
             cursors.up.enabled = true;
         }
-        // if(!my.sprite.player.body.blocked.down) {
-        //      my.vfx.jumping.setPosition(my.sprite.player.x, my.sprite.player.y + my.sprite.player.displayHeight/2);
-        //     my.vfx.jumping.explode(50);
-        //     my.sprite.player.anims.play('jump');
-        // }
-        // if(my.sprite.player.body.blocked.down && Phaser.Input.Keyboard.JustDown(cursors.up)) {
-        //     my.sprite.player.body.setVelocityY(this.JUMP_VELOCITY);
-        // }
+
         let isGrounded = my.sprite.player.body.blocked.down;
     
         if (!isGrounded && this.wasGrounded) {
@@ -566,6 +702,9 @@ class Platformer extends Phaser.Scene {
             my.vfx.jumping.setPosition(my.sprite.player.x, my.sprite.player.y + my.sprite.player.displayHeight/2);
             my.vfx.jumping.explode(50);
             my.sprite.player.anims.play('jump');
+            
+            // Play jump sound
+            this.jumpSound.play();
         } else if (isGrounded && !this.wasGrounded) {
             // Player just landed - you could add landing particles here if wanted
         }
@@ -581,6 +720,14 @@ class Platformer extends Phaser.Scene {
         // Continue with animation updates for when not grounded
         if (!isGrounded) {
             my.sprite.player.anims.play('jump');
+        }
+
+        // Check for replay key press
+        if (Phaser.Input.Keyboard.JustDown(this.replayKey)) {
+            // Only replay if completion screen is visible
+            if (this.completeText.visible) {
+                this.replayLevel();
+            }
         }
     }
 }

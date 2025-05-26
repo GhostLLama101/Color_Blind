@@ -3,16 +3,6 @@ class Load extends Phaser.Scene {
         super("loadScene");
     }
 
-// Tilesheet information:
-
-// Tile size                 •  16px × 16px
-// Space between tiles       •  1px × 1px
-// ---
-// Total tiles (horizontal)  •  20 tiles
-// Total tiles (vertical)    •  20 tiles
-// ---
-// Total tiles in sheet      •  400 tiles
-
     preload() {
         this.load.setPath("./assets/");
         // Load characters spritesheet
@@ -40,6 +30,12 @@ class Load extends Phaser.Scene {
         });
 
         this.load.multiatlas("kenny-particles", "kenny-particles.json");
+
+
+        this.load.audio('walkSound', 'footstep_concrete_000.ogg');
+        // maybe add one more for second walk sound
+        this.load.audio('jumpSound', 'phaseJump5.ogg');
+        this.load.audio('gemSound', 'phaserUp6.ogg');
     }
 
     create() {
